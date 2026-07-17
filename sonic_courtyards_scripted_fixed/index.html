@@ -1,0 +1,1765 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="An interactive architectural wind-chime experience inspired by traditional roofs, motion and generative string sound." />
+  <title>Sonic Courtyards</title>
+
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600&display=swap");
+
+    :root {
+      --paper: #f1efe8;
+      --ink: #171715;
+      --muted: rgba(23, 23, 21, .52);
+      --hairline: rgba(23, 23, 21, .16);
+      --serif: "Cormorant Garamond", "Iowan Old Style", Baskerville, "Times New Roman", serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --page-x: clamp(24px, 4vw, 66px);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    button,
+    a {
+      font: inherit;
+      color: inherit;
+    }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: 2px solid #171715;
+      outline-offset: 4px;
+    }
+
+    .noise {
+      position: fixed;
+      inset: -30%;
+      z-index: 100;
+      pointer-events: none;
+      opacity: .045;
+      mix-blend-mode: multiply;
+      background-image:
+        radial-gradient(circle at 20% 30%, #111 0 .45px, transparent .7px),
+        radial-gradient(circle at 80% 70%, #111 0 .4px, transparent .65px);
+      background-size: 7px 7px, 9px 9px;
+      animation: grain .35s steps(2) infinite;
+    }
+
+    @keyframes grain {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(1%, -1%); }
+      50% { transform: translate(-1%, 1%); }
+      75% { transform: translate(.5%, .8%); }
+      100% { transform: translate(0, 0); }
+    }
+
+    .site {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      min-height: 640px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 53% 26%, rgba(255,255,255,.72), transparent 31%),
+        linear-gradient(180deg, #f4f2ec 0%, var(--paper) 100%);
+      isolation: isolate;
+    }
+
+    .header {
+      position: absolute;
+      z-index: 20;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 84px;
+      padding: 0 var(--page-x);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .header > * { pointer-events: auto; }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: clamp(28px, 4vw, 70px);
+    }
+
+    .brand {
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+    }
+
+    .top-nav {
+      display: flex;
+      gap: 24px;
+    }
+
+    .top-nav button {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+      color: rgba(23,23,21,.48);
+      font-size: 11px;
+      transition: color .2s ease;
+    }
+
+    .top-nav button:hover,
+    .top-nav button.is-active {
+      color: var(--ink);
+    }
+
+    .configure {
+      border: 1px solid var(--hairline);
+      border-radius: 3px;
+      padding: 7px 12px;
+      background: rgba(241,239,232,.7);
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      backdrop-filter: blur(8px);
+      transition: background .2s ease, transform .2s ease;
+    }
+
+    .configure:hover {
+      background: rgba(255,255,255,.8);
+      transform: translateY(-1px);
+    }
+
+    .scene {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .copy-block {
+      position: absolute;
+      z-index: 12;
+      left: var(--page-x);
+      bottom: clamp(70px, 8.2vh, 104px);
+      width: clamp(250px, 25vw, 365px);
+      transition:
+        opacity .48s ease,
+        transform .68s cubic-bezier(.16,1,.3,1);
+    }
+
+    .copy-block.is-leaving {
+      opacity: 0;
+      transform: translateX(-26px);
+    }
+
+    .copy-block.is-entering {
+      opacity: 0;
+      transform: translateX(26px);
+    }
+
+    .copy-meta {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 18px;
+      color: rgba(23,23,21,.48);
+      font-size: 9px;
+      letter-spacing: .03em;
+    }
+
+    .copy-meta::after {
+      content: "";
+      width: 72px;
+      height: 1px;
+      background: rgba(23,23,21,.34);
+    }
+
+    .copy-title {
+      margin: 0;
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: clamp(39px, 4.35vw, 67px);
+      line-height: .82;
+      letter-spacing: -.052em;
+      text-wrap: balance;
+    }
+
+    .copy-title .country {
+      display: inline;
+      font-size: 1.06em;
+    }
+
+    .microcopy {
+      position: absolute;
+      z-index: 12;
+      right: clamp(72px, 8.5vw, 148px);
+      bottom: clamp(80px, 10vh, 122px);
+      width: clamp(175px, 17vw, 258px);
+      color: rgba(23,23,21,.52);
+      font-size: 10px;
+      line-height: 1.58;
+      transition:
+        opacity .48s ease,
+        transform .68s cubic-bezier(.16,1,.3,1);
+    }
+
+    .microcopy.is-leaving {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+
+    .microcopy.is-entering {
+      opacity: 0;
+      transform: translateX(-24px);
+    }
+
+    .stage {
+      position: absolute;
+      z-index: 5;
+      left: 30.5vw;
+      top: 8.2vh;
+      width: 54vw;
+      height: 79vh;
+      min-width: 650px;
+      min-height: 540px;
+      cursor: none;
+      touch-action: none;
+      transition:
+        opacity .48s ease,
+        transform .72s cubic-bezier(.16,1,.3,1);
+    }
+
+    .stage.is-leaving {
+      opacity: 0;
+      transform: translateX(-3.8vw) scale(.985);
+    }
+
+    .stage.is-entering {
+      opacity: 0;
+      transform: translateX(3.8vw) scale(.985);
+    }
+
+    .stage-shadow {
+      position: absolute;
+      z-index: 0;
+      left: 27%;
+      top: 29%;
+      width: 58%;
+      height: 58%;
+      border-radius: 45%;
+      background: rgba(73,65,55,.13);
+      filter: blur(36px);
+      transform: translate(82px, 30px) skewX(-8deg);
+      opacity: .55;
+      pointer-events: none;
+    }
+
+    .strings {
+      position: absolute;
+      z-index: 2;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .roof-shell {
+      position: absolute;
+      z-index: 5;
+      left: 50%;
+      top: 1.2%;
+      width: 78%;
+      height: 43%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      filter: drop-shadow(48px 40px 22px rgba(58,49,40,.18));
+    }
+
+    .roof {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transform: translateY(-12px) scale(.985);
+      transition:
+        opacity .52s ease,
+        transform .76s cubic-bezier(.16,1,.3,1);
+    }
+
+    .roof.is-active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .pointer {
+      position: absolute;
+      z-index: 10;
+      width: 22px;
+      height: 22px;
+      border: 1px solid rgba(23,23,21,.68);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .16s ease;
+      mix-blend-mode: multiply;
+    }
+
+    .pointer::before,
+    .pointer::after {
+      content: "";
+      position: absolute;
+      background: rgba(23,23,21,.52);
+    }
+
+    .pointer::before {
+      left: -6px;
+      right: -6px;
+      top: 50%;
+      height: 1px;
+    }
+
+    .pointer::after {
+      top: -6px;
+      bottom: -6px;
+      left: 50%;
+      width: 1px;
+    }
+
+    .pointer.is-visible { opacity: 1; }
+
+    .side-card {
+      position: absolute;
+      z-index: 15;
+      top: 43.5%;
+      width: 74px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      text-align: center;
+      transition: transform .25s ease, opacity .25s ease;
+    }
+
+    .side-card:hover { transform: translateY(-3px); }
+
+    .side-card.prev { left: var(--page-x); }
+    .side-card.next { right: var(--page-x); }
+
+    .side-card-frame {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 7px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(23,23,21,.18);
+      background: rgba(255,255,255,.24);
+    }
+
+    .side-card-frame svg {
+      width: 48px;
+      height: 39px;
+      overflow: visible;
+      filter: drop-shadow(6px 7px 5px rgba(40,35,30,.12));
+    }
+
+    .side-card-label {
+      display: block;
+      color: rgba(23,23,21,.48);
+      font-size: 8px;
+      line-height: 1.2;
+    }
+
+    .side-card-arrow {
+      display: block;
+      margin-top: 5px;
+      font-family: var(--serif);
+      font-size: 13px;
+    }
+
+    .explore-pill {
+      position: absolute;
+      z-index: 16;
+      left: 58%;
+      bottom: 32px;
+      transform: translateX(-50%);
+      min-width: 132px;
+      height: 26px;
+      padding: 0 13px;
+      border: 1px solid rgba(23,23,21,.14);
+      border-radius: 999px;
+      background: rgba(255,255,255,.58);
+      color: rgba(23,23,21,.55);
+      cursor: pointer;
+      font-size: 8px;
+      backdrop-filter: blur(8px);
+      transition: background .2s ease, color .2s ease;
+    }
+
+    .explore-pill:hover {
+      color: var(--ink);
+      background: rgba(255,255,255,.9);
+    }
+
+    .sound-start {
+      position: fixed;
+      z-index: 80;
+      left: 50%;
+      top: 50%;
+      width: min(360px, calc(100vw - 34px));
+      transform: translate(-50%, -50%);
+      padding: 26px 28px 24px;
+      border: 1px solid rgba(23,23,21,.16);
+      background: rgba(245,243,237,.84);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 24px 70px rgba(44,37,30,.14);
+      text-align: center;
+      transition: opacity .4s ease, transform .45s ease;
+    }
+
+    .sound-start.is-hidden {
+      opacity: 0;
+      transform: translate(-50%, -47%);
+      pointer-events: none;
+    }
+
+    .sound-start small {
+      display: block;
+      margin-bottom: 9px;
+      color: rgba(23,23,21,.48);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .sound-start h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: 33px;
+      line-height: .95;
+      font-weight: 500;
+      letter-spacing: -.035em;
+    }
+
+    .sound-start p {
+      margin: 13px auto 18px;
+      color: rgba(23,23,21,.56);
+      font-size: 10px;
+      line-height: 1.55;
+      max-width: 260px;
+    }
+
+    .sound-start button {
+      height: 34px;
+      padding: 0 17px;
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+      cursor: pointer;
+      font-size: 9px;
+    }
+
+    .settings {
+      position: fixed;
+      z-index: 70;
+      top: 72px;
+      right: var(--page-x);
+      width: 250px;
+      padding: 18px;
+      border: 1px solid rgba(23,23,21,.16);
+      background: rgba(246,244,238,.92);
+      box-shadow: 0 22px 60px rgba(50,44,36,.12);
+      backdrop-filter: blur(15px);
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+      transition: opacity .25s ease, transform .25s ease;
+    }
+
+    .settings.is-open {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .settings h3 {
+      margin: 0 0 15px;
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 500;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 11px 0;
+      border-top: 1px solid rgba(23,23,21,.10);
+      font-size: 10px;
+    }
+
+    .setting-row:first-of-type { border-top: 0; }
+
+    .setting-row button {
+      min-width: 56px;
+      height: 25px;
+      border: 1px solid rgba(23,23,21,.18);
+      background: rgba(255,255,255,.6);
+      cursor: pointer;
+      font-size: 9px;
+    }
+
+    .progress {
+      position: absolute;
+      z-index: 14;
+      top: 84px;
+      left: var(--page-x);
+      right: var(--page-x);
+      height: 1px;
+      background: rgba(23,23,21,.07);
+    }
+
+    .progress span {
+      display: block;
+      width: 33.333%;
+      height: 1px;
+      background: rgba(23,23,21,.36);
+      transform: translateX(0);
+      transition: transform .7s cubic-bezier(.16,1,.3,1);
+    }
+
+    @media (max-width: 1080px) {
+      .stage {
+        left: 24vw;
+        width: 67vw;
+      }
+
+      .microcopy {
+        right: 48px;
+        width: 190px;
+      }
+
+      .side-card.next { right: 22px; }
+      .side-card.prev { left: 22px; }
+    }
+
+    @media (max-width: 820px) {
+      .site {
+        min-height: 680px;
+      }
+
+      .top-nav { display: none; }
+
+      .stage {
+        left: -3vw;
+        top: 9vh;
+        width: 106vw;
+        min-width: 0;
+        height: 72vh;
+      }
+
+      .copy-block {
+        z-index: 18;
+        left: 21px;
+        bottom: 54px;
+        width: min(69vw, 320px);
+        padding: 14px 15px 13px 0;
+        background: linear-gradient(90deg, rgba(241,239,232,.92), rgba(241,239,232,.52), transparent);
+      }
+
+      .copy-title {
+        font-size: clamp(36px, 11vw, 54px);
+      }
+
+      .microcopy {
+        display: none;
+      }
+
+      .side-card {
+        top: 44%;
+        transform: scale(.9);
+      }
+
+      .side-card:hover { transform: scale(.9) translateY(-3px); }
+
+      .side-card.prev { left: 8px; }
+      .side-card.next { right: 8px; }
+
+      .explore-pill {
+        left: auto;
+        right: 17px;
+        transform: none;
+        bottom: 24px;
+      }
+    }
+
+    @media (max-height: 720px) and (min-width: 821px) {
+      .stage {
+        top: 6vh;
+        height: 83vh;
+      }
+
+      .copy-block { bottom: 48px; }
+      .microcopy { bottom: 58px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+
+      .noise { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <main class="site" id="site">
+    <header class="header">
+      <div class="brand-row">
+        <a href="#" class="brand">Sonic Courtyards</a>
+        <nav class="top-nav" aria-label="Primary">
+          <button class="is-active" type="button">Home</button>
+          <button type="button" id="destinationsButton">Destinations</button>
+          <button type="button" id="geometryButton">Geometry</button>
+        </nav>
+      </div>
+      <button class="configure" id="configureButton" type="button">Configure</button>
+    </header>
+
+    <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+    <section class="scene" aria-live="polite">
+      <div class="copy-block" id="copyBlock">
+        <div class="copy-meta" id="copyMeta">1899 / architecture as sound</div>
+        <h1 class="copy-title" id="copyTitle"></h1>
+      </div>
+
+      <div class="microcopy" id="microcopy"></div>
+
+      <div class="stage" id="stage">
+        <div class="stage-shadow"></div>
+        <canvas class="strings" id="stringsCanvas"></canvas>
+
+        <div class="roof-shell" aria-hidden="true">
+          <svg class="roof is-active" id="roofChina" viewBox="0 0 900 360">
+            <defs>
+              <linearGradient id="cnGold" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#f9cf56"/>
+                <stop offset=".46" stop-color="#d9941f"/>
+                <stop offset="1" stop-color="#9d4b13"/>
+              </linearGradient>
+              <linearGradient id="cnRed" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#a6381b"/>
+                <stop offset="1" stop-color="#63200f"/>
+              </linearGradient>
+              <pattern id="cnTiles" width="17" height="12" patternUnits="userSpaceOnUse">
+                <path d="M0 9Q8.5 1 17 9" fill="none" stroke="#ffe28a" stroke-width="1.1" opacity=".74"/>
+                <path d="M0 11H17" stroke="#a95c18" stroke-width=".8" opacity=".55"/>
+              </pattern>
+              <clipPath id="cnLowerClip">
+                <path d="M118 255C294 321 606 321 782 255C743 238 704 207 661 178C527 219 373 219 239 178C196 207 157 238 118 255Z"/>
+              </clipPath>
+              <clipPath id="cnUpperClip">
+                <path d="M252 143C359 179 541 179 648 143C620 127 596 110 570 88C493 113 407 113 330 88C304 110 280 127 252 143Z"/>
+              </clipPath>
+              <filter id="cnInner" x="-20%" y="-20%" width="140%" height="160%">
+                <feDropShadow dx="0" dy="11" stdDeviation="8" flood-color="#54210c" flood-opacity=".28"/>
+              </filter>
+            </defs>
+
+            <g filter="url(#cnInner)">
+              <path d="M118 255C294 321 606 321 782 255C743 238 704 207 661 178C527 219 373 219 239 178C196 207 157 238 118 255Z" fill="url(#cnGold)"/>
+              <g clip-path="url(#cnLowerClip)">
+                <rect x="80" y="166" width="740" height="160" fill="url(#cnTiles)"/>
+                <path d="M133 247C306 301 594 301 767 247" fill="none" stroke="#fff1aa" stroke-width="5" opacity=".8"/>
+                <path d="M132 263C305 326 595 326 768 263" fill="none" stroke="#70230e" stroke-width="19"/>
+              </g>
+              <path d="M122 255C294 318 606 318 778 255" fill="none" stroke="#f8d364" stroke-width="7"/>
+              <path d="M134 270C302 330 598 330 766 270" fill="none" stroke="#6f2411" stroke-width="13"/>
+              <path d="M121 255Q92 244 94 217Q104 239 136 244" fill="url(#cnGold)"/>
+              <path d="M779 255Q808 244 806 217Q796 239 764 244" fill="url(#cnGold)"/>
+
+              <path d="M252 143C359 179 541 179 648 143C620 127 596 110 570 88C493 113 407 113 330 88C304 110 280 127 252 143Z" fill="url(#cnGold)"/>
+              <g clip-path="url(#cnUpperClip)">
+                <rect x="232" y="78" width="436" height="110" fill="url(#cnTiles)"/>
+                <path d="M263 140C366 169 534 169 637 140" fill="none" stroke="#fff1aa" stroke-width="4" opacity=".8"/>
+                <path d="M261 151C366 184 534 184 639 151" fill="none" stroke="#75240f" stroke-width="14"/>
+              </g>
+              <path d="M253 143C360 177 540 177 647 143" fill="none" stroke="#f8d364" stroke-width="6"/>
+              <path d="M252 143Q230 135 233 111Q240 129 267 134" fill="url(#cnGold)"/>
+              <path d="M648 143Q670 135 667 111Q660 129 633 134" fill="url(#cnGold)"/>
+
+              <path d="M362 86C400 99 500 99 538 86L521 71C480 83 420 83 379 71Z" fill="url(#cnRed)"/>
+              <path d="M450 71V34" stroke="#d58b1d" stroke-width="7"/>
+              <path d="M450 34C438 25 439 13 450 7C461 13 462 25 450 34Z" fill="#dfa22c"/>
+
+              <g fill="#c77915">
+                <path d="M153 218c9-14 19-15 27 0-9 7-18 7-27 0Z"/>
+                <path d="M720 218c9-14 19-15 27 0-9 7-18 7-27 0Z"/>
+                <path d="M286 119c7-11 15-12 22 0-7 6-15 6-22 0Z"/>
+                <path d="M592 119c7-11 15-12 22 0-7 6-15 6-22 0Z"/>
+              </g>
+            </g>
+          </svg>
+
+          <svg class="roof" id="roofJapan" viewBox="0 0 900 360">
+            <defs>
+              <linearGradient id="jpRed" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ef3a36"/>
+                <stop offset=".62" stop-color="#c8171d"/>
+                <stop offset="1" stop-color="#861015"/>
+              </linearGradient>
+              <linearGradient id="jpEdge" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#1d1c1b"/>
+                <stop offset=".5" stop-color="#4b3a30"/>
+                <stop offset="1" stop-color="#1d1c1b"/>
+              </linearGradient>
+              <pattern id="jpTiles" width="14" height="10" patternUnits="userSpaceOnUse">
+                <path d="M0 8Q7 2 14 8" fill="none" stroke="#ff8c78" stroke-width=".8" opacity=".48"/>
+              </pattern>
+              <clipPath id="jpClip">
+                <path d="M185 219C342 267 558 267 715 219C681 207 654 183 626 158C514 188 386 188 274 158C246 183 219 207 185 219Z"/>
+              </clipPath>
+              <filter id="jpInner" x="-20%" y="-20%" width="140%" height="160%">
+                <feDropShadow dx="0" dy="12" stdDeviation="8" flood-color="#4d090c" flood-opacity=".25"/>
+              </filter>
+            </defs>
+
+            <g filter="url(#jpInner)">
+              <path d="M185 219C342 267 558 267 715 219C681 207 654 183 626 158C514 188 386 188 274 158C246 183 219 207 185 219Z" fill="url(#jpRed)"/>
+              <g clip-path="url(#jpClip)">
+                <rect x="160" y="145" width="580" height="130" fill="url(#jpTiles)"/>
+              </g>
+              <path d="M185 219C342 264 558 264 715 219" fill="none" stroke="#2c2220" stroke-width="10"/>
+              <path d="M187 219Q154 211 153 184Q166 205 202 210" fill="#d52424"/>
+              <path d="M713 219Q746 211 747 184Q734 205 698 210" fill="#d52424"/>
+
+              <path d="M263 158C371 188 529 188 637 158" fill="none" stroke="#2b2522" stroke-width="8"/>
+              <path d="M292 152L307 104H593L608 152Z" fill="url(#jpRed)"/>
+              <path d="M303 107H597" stroke="url(#jpEdge)" stroke-width="9"/>
+              <path d="M331 101H569" stroke="#171615" stroke-width="8"/>
+              <path d="M360 94H540" stroke="#352d29" stroke-width="7"/>
+              <circle cx="350" cy="101" r="7" fill="#171615"/>
+              <circle cx="550" cy="101" r="7" fill="#171615"/>
+              <path d="M193 217Q174 203 177 177" fill="none" stroke="#2b2522" stroke-width="5"/>
+              <path d="M707 217Q726 203 723 177" fill="none" stroke="#2b2522" stroke-width="5"/>
+            </g>
+          </svg>
+
+          <svg class="roof" id="roofUzbekistan" viewBox="0 0 900 360">
+            <defs>
+              <radialGradient id="uzDome" cx=".5" cy=".2" r=".86">
+                <stop offset="0" stop-color="#e9fbf5"/>
+                <stop offset=".24" stop-color="#72d2cf"/>
+                <stop offset=".64" stop-color="#168ea0"/>
+                <stop offset="1" stop-color="#07596e"/>
+              </radialGradient>
+              <linearGradient id="uzBand" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#9b3552"/>
+                <stop offset="1" stop-color="#5c1831"/>
+              </linearGradient>
+              <pattern id="uzPattern" width="24" height="18" patternUnits="userSpaceOnUse">
+                <path d="M0 9L12 0L24 9L12 18Z" fill="none" stroke="#f0d99a" stroke-width="1.2" opacity=".78"/>
+                <circle cx="12" cy="9" r="2.2" fill="#e4c16f" opacity=".8"/>
+              </pattern>
+              <clipPath id="uzDomeClip">
+                <path d="M217 231C231 111 318 54 450 54C582 54 669 111 683 231C574 262 326 262 217 231Z"/>
+              </clipPath>
+              <filter id="uzInner" x="-20%" y="-20%" width="140%" height="160%">
+                <feDropShadow dx="0" dy="13" stdDeviation="9" flood-color="#174552" flood-opacity=".24"/>
+              </filter>
+            </defs>
+
+            <g filter="url(#uzInner)">
+              <path d="M217 231C231 111 318 54 450 54C582 54 669 111 683 231C574 262 326 262 217 231Z" fill="url(#uzDome)"/>
+              <g clip-path="url(#uzDomeClip)" fill="none" stroke="#5d4960" stroke-width="3" opacity=".7">
+                <path d="M450 55C389 104 358 163 350 245"/>
+                <path d="M450 55C413 109 397 171 395 251"/>
+                <path d="M450 55V254"/>
+                <path d="M450 55C487 109 503 171 505 251"/>
+                <path d="M450 55C511 104 542 163 550 245"/>
+                <path d="M450 55C342 95 289 153 276 239"/>
+                <path d="M450 55C558 95 611 153 624 239"/>
+              </g>
+              <ellipse cx="450" cy="231" rx="235" ry="44" fill="url(#uzBand)"/>
+              <ellipse cx="450" cy="224" rx="235" ry="38" fill="url(#uzPattern)" opacity=".92"/>
+              <ellipse cx="450" cy="224" rx="234" ry="37" fill="none" stroke="#4e1a31" stroke-width="7"/>
+              <ellipse cx="450" cy="238" rx="219" ry="28" fill="#783049" opacity=".72"/>
+
+              <ellipse cx="450" cy="55" rx="42" ry="15" fill="#6d243c"/>
+              <ellipse cx="450" cy="51" rx="33" ry="10" fill="url(#uzPattern)"/>
+              <path d="M450 41V20" stroke="#d3ac57" stroke-width="6"/>
+              <circle cx="450" cy="15" r="7" fill="#d3ac57"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="pointer" id="pointer" aria-hidden="true"></div>
+      </div>
+
+      <button class="side-card prev" id="prevCard" type="button" aria-label="Previous destination">
+        <span class="side-card-frame" id="prevThumb"></span>
+        <span class="side-card-label" id="prevLabel"></span>
+        <span class="side-card-arrow">←</span>
+      </button>
+
+      <button class="side-card next" id="nextCard" type="button" aria-label="Next destination">
+        <span class="side-card-frame" id="nextThumb"></span>
+        <span class="side-card-label" id="nextLabel"></span>
+        <span class="side-card-arrow">→</span>
+      </button>
+
+      <button class="explore-pill" id="explorePill" type="button"></button>
+    </section>
+
+    <section class="sound-start" id="soundStart" aria-label="Activate interactive audio">
+      <small>Interactive wind installation</small>
+      <h2>Move through the strings.</h2>
+      <p>Each roof carries a different field, scale and resonance. Headphones give the best result.</p>
+      <button type="button" id="startButton">Enter with sound</button>
+    </section>
+
+    <aside class="settings" id="settings" aria-hidden="true">
+      <h3>Configure the field</h3>
+      <div class="setting-row">
+        <span>Sound</span>
+        <button type="button" id="muteButton">On</button>
+      </div>
+      <div class="setting-row">
+        <span>String density</span>
+        <button type="button" id="densityButton">Dense</button>
+      </div>
+      <div class="setting-row">
+        <span>Motion</span>
+        <button type="button" id="motionButton">Soft</button>
+      </div>
+      <div class="setting-row">
+        <span>Performance</span>
+        <button type="button" id="qualityButton">Auto</button>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const SCENES = [
+        {
+          id: "china",
+          country: "China",
+          year: "1899",
+          title: "golden courtyards, silk-road echoes, roofs that rise against gravity",
+          microcopy: "Move slowly for low, lingering notes. Faster gestures brighten the overtones and wake the surrounding strands.",
+          roof: "roofChina",
+          base: 146.83,
+          scale: [0, 2, 4, 7, 9],
+          timbre: "silk",
+          color: [76, 68, 58],
+          count: 72,
+          x0: .205,
+          x1: .795,
+          topBase: .318,
+          topCurve: t => .013 * Math.pow((t - .5) * 2, 2),
+          length: t => .45 + .105 * Math.sin(Math.PI * t) + .035 * Math.sin(7 * Math.PI * t),
+          beadGap: 7.2,
+          shadowX: 58,
+          shadowY: 21,
+          glyphs: ["風","音","雲","山","月","天","水","心"],
+          fontStack: '"Noto Serif SC","Songti SC","STSong","SimSun","PMingLiU",serif',
+          glyphSize: 9.1,
+          glyphSpacing: 19
+        },
+        {
+          id: "japan",
+          country: "Japan",
+          year: "1195",
+          title: "red eaves in the mist, stone paths, and architecture shaped by patience",
+          microcopy: "A lighter, drier field with shorter decay. The red roof carries a bright koto-like synthetic response.",
+          roof: "roofJapan",
+          base: 164.81,
+          scale: [0, 2, 3, 7, 8],
+          timbre: "bright",
+          color: [71, 69, 65],
+          count: 82,
+          x0: .225,
+          x1: .775,
+          topBase: .305,
+          topCurve: t => .004 * Math.cos(Math.PI * 2 * t),
+          length: t => .49 + .018 * Math.sin(5 * Math.PI * t) - .03 * Math.pow((t - .5) * 2, 2),
+          beadGap: 6.2,
+          shadowX: 54,
+          shadowY: 20,
+          glyphs: ["あ","い","う","え","お","か","さ","な","や","ら","わ"],
+          fontStack: '"Hiragino Mincho ProN","Yu Mincho","MS Mincho","Noto Serif JP",serif',
+          glyphSize: 8.7,
+          glyphSpacing: 18
+        },
+        {
+          id: "uzbekistan",
+          country: "Uzbekistan",
+          year: "1435",
+          title: "turquoise domes, desert light, patterned walls, and courtyards tuned to wind",
+          microcopy: "The circular underside creates a narrower, deeper curtain. Lower modal notes bloom into glassy upper partials.",
+          roof: "roofUzbekistan",
+          base: 123.47,
+          scale: [0, 2, 3, 5, 7, 10],
+          timbre: "glass",
+          color: [57, 69, 70],
+          count: 64,
+          x0: .255,
+          x1: .745,
+          topBase: .322,
+          topCurve: t => .044 * (1 - Math.sqrt(Math.max(0, 1 - Math.pow((t - .5) * 2, 2)))),
+          length: t => .43 + .075 * Math.sin(Math.PI * t) + .018 * Math.sin(6 * Math.PI * t),
+          beadGap: 7.5,
+          shadowX: 64,
+          shadowY: 23,
+          glyphs: ["O","ʻ","Z","B","E","K","I","S","T","O","N"],
+          fontStack: 'Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif',
+          glyphSize: 8.1,
+          glyphSpacing: 17
+        }
+      ];
+
+      const THUMBS = {
+        china: `
+          <svg viewBox="0 0 90 58" aria-hidden="true">
+            <path d="M8 42Q45 56 82 42Q72 37 65 29Q45 36 25 29Q18 37 8 42Z" fill="#d58d20"/>
+            <path d="M27 27Q45 34 63 27Q58 23 55 18Q45 22 35 18Q32 23 27 27Z" fill="#e6a72d"/>
+            <path d="M45 18V8" stroke="#a45b17" stroke-width="3"/>
+          </svg>`,
+        japan: `
+          <svg viewBox="0 0 90 58" aria-hidden="true">
+            <path d="M10 40Q45 52 80 40Q70 36 64 29Q45 34 26 29Q20 36 10 40Z" fill="#d92427"/>
+            <path d="M28 28L33 17H57L62 28Z" fill="#e33a36"/>
+            <path d="M31 17H59" stroke="#24211f" stroke-width="4"/>
+          </svg>`,
+        uzbekistan: `
+          <svg viewBox="0 0 90 58" aria-hidden="true">
+            <path d="M15 39Q18 10 45 10Q72 10 75 39Q45 49 15 39Z" fill="#4fc7c5"/>
+            <path d="M20 39Q45 47 70 39" stroke="#7a2945" stroke-width="7"/>
+            <path d="M45 10V4" stroke="#bb9450" stroke-width="3"/>
+          </svg>`
+      };
+
+      const site = document.getElementById("site");
+      const stage = document.getElementById("stage");
+      const canvas = document.getElementById("stringsCanvas");
+      const ctx = canvas.getContext("2d", { alpha: true });
+      const pointerEl = document.getElementById("pointer");
+      const copyBlock = document.getElementById("copyBlock");
+      const copyMeta = document.getElementById("copyMeta");
+      const copyTitle = document.getElementById("copyTitle");
+      const microcopy = document.getElementById("microcopy");
+      const progressBar = document.getElementById("progressBar");
+      const prevCard = document.getElementById("prevCard");
+      const nextCard = document.getElementById("nextCard");
+      const prevThumb = document.getElementById("prevThumb");
+      const nextThumb = document.getElementById("nextThumb");
+      const prevLabel = document.getElementById("prevLabel");
+      const nextLabel = document.getElementById("nextLabel");
+      const explorePill = document.getElementById("explorePill");
+      const soundStart = document.getElementById("soundStart");
+      const startButton = document.getElementById("startButton");
+      const configureButton = document.getElementById("configureButton");
+      const settings = document.getElementById("settings");
+      const muteButton = document.getElementById("muteButton");
+      const densityButton = document.getElementById("densityButton");
+      const motionButton = document.getElementById("motionButton");
+      const qualityButton = document.getElementById("qualityButton");
+      const destinationsButton = document.getElementById("destinationsButton");
+      const geometryButton = document.getElementById("geometryButton");
+
+      let index = 0;
+      let strings = [];
+      let width = 1;
+      let height = 1;
+      let dpr = Math.min(window.devicePixelRatio || 1, 2);
+      let lastTime = performance.now();
+      let animationFrame = null;
+      let changing = false;
+      let densityMode = 1;
+      let motionMode = 1;
+      let wheelLocked = false;
+      let touchStart = null;
+
+      const hardwareThreads = navigator.hardwareConcurrency || 4;
+      let qualityMode = "auto";
+      let qualityScale = hardwareThreads <= 4 ? .64 : hardwareThreads <= 8 ? .76 : .86;
+      let slowFrameCount = 0;
+      let frameAccumulator = 0;
+      let frameSamples = 0;
+      let pageVisible = true;
+
+      const glyphSpriteCache = new Map();
+
+      function getGlyphSprite(scene, glyph) {
+        const key = `${scene.id}:${glyph}:${scene.glyphSize}`;
+        if (glyphSpriteCache.has(key)) return glyphSpriteCache.get(key);
+
+        const scale = 2;
+        const size = Math.ceil(scene.glyphSize * 3.2);
+        const sprite = document.createElement("canvas");
+        sprite.width = size * scale;
+        sprite.height = size * scale;
+
+        const spriteContext = sprite.getContext("2d");
+        spriteContext.setTransform(scale, 0, 0, scale, 0, 0);
+        spriteContext.textAlign = "center";
+        spriteContext.textBaseline = "middle";
+        spriteContext.fillStyle = "#000";
+        spriteContext.font = `${scene.glyphSize}px ${scene.fontStack}`;
+        spriteContext.fillText(glyph, size / 2, size / 2);
+
+        const result = { canvas: sprite, size };
+        glyphSpriteCache.set(key, result);
+        return result;
+      }
+
+      const pointer = {
+        active: false,
+        x: -9999,
+        y: -9999,
+        px: -9999,
+        py: -9999,
+        dx: 0,
+        dy: 0
+      };
+
+      class AudioEngine {
+        constructor() {
+          this.context = null;
+          this.output = null;
+          this.enabled = false;
+          this.muted = false;
+          this.convolver = null;
+          this.noiseBuffer = null;
+          this.activeVoices = 0;
+          this.maxVoices = hardwareThreads <= 4 ? 10 : 16;
+        }
+
+        async enable() {
+          if (!this.context) {
+            this.context = new (window.AudioContext || window.webkitAudioContext)();
+
+            const compressor = this.context.createDynamicsCompressor();
+            compressor.threshold.value = -18;
+            compressor.knee.value = 16;
+            compressor.ratio.value = 3;
+            compressor.attack.value = .005;
+            compressor.release.value = .17;
+
+            this.output = this.context.createGain();
+            this.output.gain.value = this.muted ? 0 : .43;
+
+            const dry = this.context.createGain();
+            dry.gain.value = .92;
+
+            this.convolver = this.context.createConvolver();
+            this.convolver.buffer = this.createImpulse(1.35, 2.4);
+
+            const wet = this.context.createGain();
+            wet.gain.value = .16;
+
+            this.output.connect(dry);
+            this.output.connect(this.convolver);
+            this.convolver.connect(wet);
+            dry.connect(compressor);
+            wet.connect(compressor);
+            compressor.connect(this.context.destination);
+
+            this.noiseBuffer = this.createNoiseBuffer(.028);
+          }
+
+          if (this.context.state === "suspended") {
+            await this.context.resume();
+          }
+
+          this.enabled = true;
+        }
+
+        createImpulse(seconds, decay) {
+          const length = Math.floor(this.context.sampleRate * seconds);
+          const buffer = this.context.createBuffer(2, length, this.context.sampleRate);
+
+          for (let channel = 0; channel < 2; channel++) {
+            const data = buffer.getChannelData(channel);
+            for (let i = 0; i < length; i++) {
+              data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+            }
+          }
+
+          return buffer;
+        }
+
+        createNoiseBuffer(seconds) {
+          const length = Math.floor(this.context.sampleRate * seconds);
+          const buffer = this.context.createBuffer(1, length, this.context.sampleRate);
+          const data = buffer.getChannelData(0);
+
+          for (let i = 0; i < length; i++) {
+            data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+          }
+
+          return buffer;
+        }
+
+        setMuted(value) {
+          this.muted = value;
+          if (this.context && this.output) {
+            const now = this.context.currentTime;
+            this.output.gain.cancelScheduledValues(now);
+            this.output.gain.setTargetAtTime(value ? 0 : .43, now, .025);
+          }
+        }
+
+        play(frequency, strength, pan, tone, timbre) {
+          if (
+            !this.enabled ||
+            this.muted ||
+            !this.context ||
+            !this.output ||
+            this.activeVoices >= this.maxVoices
+          ) return;
+
+          this.activeVoices += 1;
+
+          const audio = this.context;
+          const now = audio.currentTime;
+          const level = Math.min(Math.max(strength, .10), 1.05);
+          const brightness = Math.min(Math.max(tone, 0), 1);
+          const duration = timbre === "glass" ? 2.72 : timbre === "bright" ? 1.34 : 2.18;
+
+          const voice = audio.createGain();
+          const panner = audio.createStereoPanner();
+          panner.pan.value = Math.min(Math.max(pan, -1), 1);
+          voice.connect(panner).connect(this.output);
+
+          const noise = audio.createBufferSource();
+          noise.buffer = this.noiseBuffer;
+
+          const bodyFilter = audio.createBiquadFilter();
+          bodyFilter.type = "bandpass";
+          bodyFilter.frequency.value =
+            frequency *
+            (timbre === "silk"
+              ? .94 + brightness * .018
+              : timbre === "bright"
+              ? 1.08 + brightness * .055
+              : 1.01 + brightness * .028);
+          bodyFilter.Q.value = timbre === "glass" ? 13 : timbre === "bright" ? 9 : 11;
+
+          const bodyGain = audio.createGain();
+          bodyGain.gain.setValueAtTime(.0001, now);
+          bodyGain.gain.exponentialRampToValueAtTime(
+            (timbre === "silk" ? .245 : timbre === "bright" ? .205 : .225) * level,
+            now + .008
+          );
+          bodyGain.gain.exponentialRampToValueAtTime(.0001, now + duration);
+
+          const overtoneFilter = audio.createBiquadFilter();
+          overtoneFilter.type = "bandpass";
+          overtoneFilter.frequency.value =
+            frequency * (timbre === "glass" ? 2.71 : timbre === "bright" ? 3.92 : 1.51);
+          overtoneFilter.Q.value = timbre === "glass" ? 16 : 12;
+
+          const overtoneGain = audio.createGain();
+          overtoneGain.gain.setValueAtTime(.0001, now);
+          overtoneGain.gain.exponentialRampToValueAtTime((.045 + brightness * .072) * level, now + .006);
+          overtoneGain.gain.exponentialRampToValueAtTime(.0001, now + duration * .64);
+
+          noise.connect(bodyFilter).connect(bodyGain).connect(voice);
+          noise.connect(overtoneFilter).connect(overtoneGain).connect(voice);
+
+          const fundamental = audio.createOscillator();
+          const fundamentalGain = audio.createGain();
+          fundamental.type = timbre === "silk" ? "sine" : "triangle";
+          fundamental.frequency.setValueAtTime(frequency, now);
+          fundamental.detune.setValueAtTime((Math.random() - .5) * 4, now);
+          fundamentalGain.gain.setValueAtTime(.0001, now);
+          fundamentalGain.gain.exponentialRampToValueAtTime(.045 * level, now + .012);
+          fundamentalGain.gain.exponentialRampToValueAtTime(.0001, now + duration * .88);
+          fundamental.connect(fundamentalGain).connect(voice);
+
+          const overtone = audio.createOscillator();
+          const overtoneOscGain = audio.createGain();
+          overtone.type = "sine";
+          overtone.frequency.setValueAtTime(
+            frequency * (timbre === "glass" ? 3.16 : timbre === "bright" ? 2.01 : 1.995),
+            now
+          );
+          overtoneOscGain.gain.setValueAtTime(.0001, now);
+          overtoneOscGain.gain.exponentialRampToValueAtTime(
+            (timbre === "bright" ? .017 : timbre === "glass" ? .014 : .010) * level,
+            now + .011
+          );
+          overtoneOscGain.gain.exponentialRampToValueAtTime(.0001, now + duration * .56);
+          overtone.connect(overtoneOscGain).connect(voice);
+
+          overtone.onended = () => {
+            this.activeVoices = Math.max(0, this.activeVoices - 1);
+            try {
+              voice.disconnect();
+              panner.disconnect();
+            } catch (_) {}
+          };
+
+          noise.start(now);
+          noise.stop(now + .03);
+          fundamental.start(now);
+          fundamental.stop(now + duration);
+          overtone.start(now);
+          overtone.stop(now + duration);
+        }
+      }
+      const audio = new AudioEngine();
+
+      function resize() {
+        const rect = stage.getBoundingClientRect();
+        width = Math.max(1, rect.width);
+        height = Math.max(1, rect.height);
+
+        const deviceScale = window.devicePixelRatio || 1;
+        const dprCap = qualityMode === "high" ? 1.65 : qualityMode === "low" ? 1 : hardwareThreads <= 4 ? 1.1 : 1.35;
+        dpr = Math.min(deviceScale, dprCap);
+
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        buildStrings();
+      }
+
+      function buildStrings() {
+        const scene = SCENES[index];
+        const viewportFactor = width < 720 ? .72 : width < 1100 ? .86 : 1;
+        const count = Math.max(
+          28,
+          Math.round(scene.count * densityMode * qualityScale * viewportFactor)
+        );
+        const nodeCount = qualityMode === "high" ? 17 : qualityMode === "low" ? 11 : 14;
+
+        strings = Array.from({ length: count }, (_, i) => {
+          const t = count <= 1 ? 0 : i / (count - 1);
+          const anchorX = width * (scene.x0 + (scene.x1 - scene.x0) * t);
+          const anchorY = height * (scene.topBase + scene.topCurve(t));
+          const length = Math.max(130, height * scene.length(t));
+          const scaleDegree = scene.scale[i % scene.scale.length];
+          const octave = Math.floor(i / scene.scale.length) * 1.18;
+          const lengthDrop = (length / height - .4) * 7.5;
+          const frequency = scene.base * Math.pow(2, (scaleDegree + octave - lengthDrop) / 12);
+
+          return {
+            t,
+            anchorX,
+            anchorY,
+            length,
+            frequency,
+            nodes: Array.from({ length: nodeCount }, () => ({ x: 0, v: 0 })),
+            glow: 0,
+            energy: 0,
+            lastSound: 0,
+            phase: Math.random() * Math.PI * 2
+          };
+        });
+      }
+
+      function setPointer(clientX, clientY, active = true) {
+        const rect = stage.getBoundingClientRect();
+        pointer.px = pointer.x;
+        pointer.py = pointer.y;
+        pointer.x = clientX - rect.left;
+        pointer.y = clientY - rect.top;
+        pointer.dx = pointer.x - pointer.px;
+        pointer.dy = pointer.y - pointer.py;
+        pointer.active = active;
+
+        pointerEl.style.left = pointer.x + "px";
+        pointerEl.style.top = pointer.y + "px";
+        pointerEl.classList.toggle("is-visible", active);
+      }
+
+      function applyInteraction(scene, string, now) {
+        if (!pointer.active) return;
+
+        const horizontalDistance = Math.abs(pointer.x - string.anchorX);
+        if (
+          horizontalDistance > 120 ||
+          pointer.y < string.anchorY - 25 ||
+          pointer.y > string.anchorY + string.length + 25
+        ) return;
+
+        const speed = Math.hypot(pointer.dx, pointer.dy);
+        const nodes = string.nodes;
+        const nodeCount = nodes.length;
+        let touched = false;
+
+        for (let n = 1; n < nodeCount; n++) {
+          const ratio = n / (nodeCount - 1);
+          const y = string.anchorY + string.length * ratio;
+          const x = string.anchorX + nodes[n].x;
+          const dx = pointer.x - x;
+          const dy = pointer.y - y;
+          const radius = 66 + ratio * 13;
+
+          if (Math.abs(dx) < radius && Math.abs(dy) < radius) {
+            const distanceSquared = dx * dx + dy * dy;
+            const radiusSquared = radius * radius;
+
+            if (distanceSquared < radiusSquared) {
+              const proximity = 1 - Math.sqrt(distanceSquared) / radius;
+              const gesture = Math.max(-22, Math.min(22, pointer.dx));
+              nodes[n].v += gesture * proximity * (.024 + ratio * .028) * motionMode;
+              touched = true;
+            }
+          }
+        }
+
+        const previousSide = pointer.px - string.anchorX;
+        const currentSide = pointer.x - string.anchorX;
+        const crossed = previousSide * currentSide <= 0 && Math.abs(pointer.dx) > 1.8;
+
+        if (touched && crossed && now - string.lastSound > 84) {
+          const strength = Math.min(Math.abs(pointer.dx) / 18, 1.05);
+          const tone = Math.max(0, Math.min(1, (pointer.y - string.anchorY) / string.length));
+
+          audio.play(
+            string.frequency,
+            strength,
+            string.t * 2 - 1,
+            tone,
+            scene.timbre
+          );
+
+          string.glow = 1;
+          string.lastSound = now;
+          string.energy = Math.max(string.energy, strength);
+
+          for (let n = 2; n < nodes.length; n++) {
+            const ratio = n / (nodes.length - 1);
+            nodes[n].v += Math.sign(pointer.dx || 1) * strength * ratio * 1.9 * motionMode;
+          }
+        }
+      }
+      function updateString(scene, string, delta, now) {
+        const nodes = string.nodes;
+        const nearPointer =
+          pointer.active &&
+          Math.abs(pointer.x - string.anchorX) < 135 &&
+          pointer.y > string.anchorY - 35 &&
+          pointer.y < string.anchorY + string.length + 35;
+
+        applyInteraction(scene, string, now);
+
+        if (!nearPointer && string.energy < .002 && string.glow < .01) {
+          return;
+        }
+
+        const tension = .155;
+        const damping = Math.pow(.905, delta);
+        let energy = 0;
+
+        for (let n = 1; n < nodes.length; n++) {
+          const left = nodes[n - 1].x;
+          const right = n === nodes.length - 1 ? nodes[n].x : nodes[n + 1].x;
+          const laplacian = left + right - 2 * nodes[n].x;
+          const restore = -nodes[n].x * (.013 + n / nodes.length * .003);
+          nodes[n].v += (laplacian * tension + restore) * delta;
+          nodes[n].v *= damping;
+        }
+
+        nodes[0].x = 0;
+        nodes[0].v = 0;
+
+        for (let n = 1; n < nodes.length; n++) {
+          nodes[n].x += nodes[n].v * delta;
+          nodes[n].x = Math.max(-82, Math.min(82, nodes[n].x));
+          energy += Math.abs(nodes[n].v) + Math.abs(nodes[n].x) * .008;
+        }
+
+        string.energy = energy / Math.max(1, nodes.length - 1);
+        string.glow *= Math.pow(.914, delta);
+      }
+      function sampleNode(string, ratio) {
+        const max = string.nodes.length - 1;
+        const position = ratio * max;
+        const i = Math.floor(position);
+        const j = Math.min(max, i + 1);
+        const blend = position - i;
+        const offset = string.nodes[i].x * (1 - blend) + string.nodes[j].x * blend;
+
+        return {
+          x: string.anchorX + offset,
+          y: string.anchorY + string.length * ratio
+        };
+      }
+
+      function traceStringPath(string, time, sampleCount) {
+        ctx.beginPath();
+
+        for (let sample = 0; sample <= sampleCount; sample++) {
+          const ratio = sample / sampleCount;
+          const p = sampleNode(string, ratio);
+          const ambient =
+            Math.sin(time * .00072 + string.phase + ratio * 2.35) *
+            .25 *
+            ratio;
+
+          if (sample === 0) ctx.moveTo(p.x + ambient, p.y);
+          else ctx.lineTo(p.x + ambient, p.y);
+        }
+      }
+
+      function drawField(scene, shadow, time) {
+        const [r, g, b] = scene.color;
+        const samples = qualityMode === "high" ? 14 : qualityMode === "low" ? 8 : 10;
+
+        ctx.save();
+        ctx.lineCap = "round";
+
+        if (shadow) {
+          ctx.translate(scene.shadowX, scene.shadowY);
+          ctx.strokeStyle = "rgba(68,61,55,.064)";
+          ctx.lineWidth = 1.25;
+          ctx.setLineDash([.6, Math.max(4.4, scene.beadGap - .8)]);
+
+          for (const string of strings) {
+            traceStringPath(string, time, samples);
+            ctx.stroke();
+          }
+
+          ctx.restore();
+          return;
+        }
+
+        for (let stringIndex = 0; stringIndex < strings.length; stringIndex++) {
+          const string = strings[stringIndex];
+          const glow = string.glow;
+
+          // Faint dotted stem so the letter sequence still reads as a string.
+          ctx.save();
+          ctx.strokeStyle = `rgba(${r},${g},${b},${.11 + glow * .16})`;
+          ctx.lineWidth = .58 + glow * .20;
+          ctx.setLineDash([.45, Math.max(5.2, scene.beadGap)]);
+          traceStringPath(string, time, samples);
+          ctx.stroke();
+          ctx.restore();
+
+          const glyphCount = Math.max(
+            8,
+            Math.floor(string.length / (
+              qualityMode === "high"
+                ? scene.glyphSpacing - 2
+                : qualityMode === "low"
+                ? scene.glyphSpacing + 5
+                : scene.glyphSpacing
+            ))
+          );
+
+          ctx.save();
+          ctx.globalAlpha = .43 + glow * .50;
+
+          for (let glyphIndex = 0; glyphIndex <= glyphCount; glyphIndex++) {
+            const ratio = glyphIndex / Math.max(1, glyphCount);
+            const point = sampleNode(string, ratio);
+            const ambient =
+              Math.sin(time * .00072 + string.phase + ratio * 2.35) *
+              .25 *
+              ratio;
+
+            const glyph =
+              scene.glyphs[(glyphIndex + stringIndex) % scene.glyphs.length];
+            const sprite = getGlyphSprite(scene, glyph);
+            const drawSize = sprite.size + glow * 1.4;
+
+            ctx.drawImage(
+              sprite.canvas,
+              point.x + ambient - drawSize / 2,
+              point.y - drawSize / 2,
+              drawSize,
+              drawSize
+            );
+          }
+
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+      function render(time) {
+        if (!pageVisible) {
+          animationFrame = null;
+          return;
+        }
+
+        const elapsed = time - lastTime;
+        const delta = Math.min(elapsed / 16.6667, 2);
+        lastTime = time;
+        const scene = SCENES[index];
+
+        frameAccumulator += elapsed;
+        frameSamples += 1;
+
+        ctx.clearRect(0, 0, width, height);
+
+        for (const string of strings) {
+          updateString(scene, string, delta, time);
+        }
+
+        drawField(scene, true, time);
+        drawField(scene, false, time);
+
+        pointer.dx *= .84;
+        pointer.dy *= .84;
+
+        if (qualityMode === "auto" && frameSamples >= 36) {
+          const averageFrame = frameAccumulator / frameSamples;
+
+          if (averageFrame > 23 && qualityScale > .50) {
+            slowFrameCount += 1;
+
+            if (slowFrameCount >= 2) {
+              qualityScale = Math.max(.50, qualityScale * .84);
+              slowFrameCount = 0;
+              buildStrings();
+            }
+          } else {
+            slowFrameCount = Math.max(0, slowFrameCount - 1);
+          }
+
+          frameAccumulator = 0;
+          frameSamples = 0;
+        }
+
+        animationFrame = requestAnimationFrame(render);
+      }
+      function updateText() {
+        const scene = SCENES[index];
+        copyMeta.textContent = `${scene.year} / architecture as sound`;
+        copyTitle.innerHTML = `<span class="country">${scene.country} —</span> ${scene.title}`;
+        microcopy.textContent = scene.microcopy;
+
+        const previousIndex = (index - 1 + SCENES.length) % SCENES.length;
+        const nextIndex = (index + 1) % SCENES.length;
+        const previous = SCENES[previousIndex];
+        const next = SCENES[nextIndex];
+
+        prevThumb.innerHTML = THUMBS[previous.id];
+        nextThumb.innerHTML = THUMBS[next.id];
+        prevLabel.textContent = previous.country;
+        nextLabel.textContent = next.country;
+        explorePill.textContent = `Explore ${next.country}`;
+        progressBar.style.transform = `translateX(${index * 100}%)`;
+      }
+
+      function updateRoof() {
+        document.querySelectorAll(".roof").forEach((roof) => {
+          roof.classList.toggle("is-active", roof.id === SCENES[index].roof);
+        });
+      }
+
+      function changeScene(nextIndex) {
+        if (changing) return;
+        const normalized = (nextIndex + SCENES.length) % SCENES.length;
+        if (normalized === index) return;
+
+        changing = true;
+        copyBlock.classList.add("is-leaving");
+        microcopy.classList.add("is-leaving");
+        stage.classList.add("is-leaving");
+
+        window.setTimeout(() => {
+          index = normalized;
+          updateText();
+          updateRoof();
+          buildStrings();
+
+          copyBlock.classList.remove("is-leaving");
+          microcopy.classList.remove("is-leaving");
+          stage.classList.remove("is-leaving");
+
+          copyBlock.classList.add("is-entering");
+          microcopy.classList.add("is-entering");
+          stage.classList.add("is-entering");
+
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              copyBlock.classList.remove("is-entering");
+              microcopy.classList.remove("is-entering");
+              stage.classList.remove("is-entering");
+            });
+          });
+
+          window.setTimeout(() => {
+            changing = false;
+          }, 720);
+        }, 360);
+      }
+
+      async function activateSound() {
+        try {
+          await audio.enable();
+          audio.setMuted(false);
+          muteButton.textContent = "On";
+          soundStart.classList.add("is-hidden");
+          window.setTimeout(() => soundStart.remove(), 500);
+        } catch (error) {
+          console.error(error);
+          startButton.textContent = "Audio blocked — click again";
+        }
+      }
+
+      stage.addEventListener("pointermove", (event) => {
+        setPointer(event.clientX, event.clientY, true);
+      });
+
+      stage.addEventListener("pointerenter", (event) => {
+        setPointer(event.clientX, event.clientY, true);
+      });
+
+      stage.addEventListener("pointerleave", () => {
+        pointer.active = false;
+        pointerEl.classList.remove("is-visible");
+      });
+
+      stage.addEventListener("pointerdown", async (event) => {
+        await audio.enable();
+        setPointer(event.clientX, event.clientY, true);
+      });
+
+      startButton.addEventListener("click", activateSound);
+      prevCard.addEventListener("click", () => changeScene(index - 1));
+      nextCard.addEventListener("click", () => changeScene(index + 1));
+      explorePill.addEventListener("click", () => changeScene(index + 1));
+
+      configureButton.addEventListener("click", () => {
+        const open = settings.classList.toggle("is-open");
+        settings.setAttribute("aria-hidden", String(!open));
+      });
+
+      muteButton.addEventListener("click", async () => {
+        if (!audio.enabled) await audio.enable();
+        audio.setMuted(!audio.muted);
+        muteButton.textContent = audio.muted ? "Off" : "On";
+      });
+
+      densityButton.addEventListener("click", () => {
+        densityMode = densityMode === 1 ? .68 : 1;
+        densityButton.textContent = densityMode === 1 ? "Dense" : "Airy";
+        buildStrings();
+      });
+
+      motionButton.addEventListener("click", () => {
+        motionMode = motionMode === 1 ? 1.48 : 1;
+        motionButton.textContent = motionMode === 1 ? "Soft" : "Fluid";
+      });
+
+      qualityButton.addEventListener("click", () => {
+        qualityMode =
+          qualityMode === "auto" ? "low" :
+          qualityMode === "low" ? "high" :
+          "auto";
+
+        qualityButton.textContent =
+          qualityMode === "auto" ? "Auto" :
+          qualityMode === "low" ? "Fast" :
+          "High";
+
+        qualityScale =
+          qualityMode === "low" ? .54 :
+          qualityMode === "high" ? 1 :
+          hardwareThreads <= 4 ? .64 :
+          hardwareThreads <= 8 ? .76 :
+          .86;
+
+        resize();
+      });
+
+      destinationsButton.addEventListener("click", () => changeScene(index + 1));
+      geometryButton.addEventListener("click", () => {
+        settings.classList.add("is-open");
+        settings.setAttribute("aria-hidden", "false");
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowRight") changeScene(index + 1);
+        if (event.key === "ArrowLeft") changeScene(index - 1);
+        if (event.key.toLowerCase() === "m") muteButton.click();
+        if (event.key === "Escape") {
+          settings.classList.remove("is-open");
+          settings.setAttribute("aria-hidden", "true");
+        }
+      });
+
+      site.addEventListener("wheel", (event) => {
+        if (wheelLocked || Math.abs(event.deltaY) < 22) return;
+        wheelLocked = true;
+        changeScene(index + (event.deltaY > 0 ? 1 : -1));
+        window.setTimeout(() => wheelLocked = false, 920);
+      }, { passive: true });
+
+      site.addEventListener("touchstart", (event) => {
+        const touch = event.changedTouches[0];
+        touchStart = touch ? touch.clientX : null;
+      }, { passive: true });
+
+      site.addEventListener("touchend", (event) => {
+        if (touchStart === null) return;
+        const touch = event.changedTouches[0];
+        const end = touch ? touch.clientX : touchStart;
+        const distance = end - touchStart;
+        if (Math.abs(distance) > 65) {
+          changeScene(index + (distance < 0 ? 1 : -1));
+        }
+        touchStart = null;
+      }, { passive: true });
+
+      document.addEventListener("visibilitychange", () => {
+        pageVisible = !document.hidden;
+
+        if (pageVisible && !animationFrame) {
+          lastTime = performance.now();
+          animationFrame = requestAnimationFrame(render);
+        }
+      });
+
+      const resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(stage);
+
+      updateText();
+      updateRoof();
+      resize();
+      animationFrame = requestAnimationFrame(render);
+
+      if (new URLSearchParams(location.search).has("preview")) {
+        soundStart.remove();
+        audio.setMuted(true);
+      }
+    })();
+  </script>
+</body>
+</html>
